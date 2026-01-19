@@ -104,8 +104,13 @@ static _Thread_local char time_it_label_buffer[512];
 
         if (time_it_enable_tree)
         {
-            for (int i = 0; i < t->depth; ++i)
-                fputs("    ", tree_out);
+            // Print tree structure with pipes and dashes
+            for (int i = 0; i < t->depth; ++i) {
+                fputs("|   ", tree_out);
+            }
+            if (t->depth > 0) {
+                fputs("|-- ", tree_out);
+            }
             fprintf(tree_out, "[%d] %s [%s]: ", t->call_index, t->name, t->label);
             print_scientific(tree_out, elapsed_ns);
             fputs("\n", tree_out);
