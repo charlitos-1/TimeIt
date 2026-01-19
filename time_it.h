@@ -1,4 +1,10 @@
 #pragma once
+
+/* For C code, ensure POSIX functions like clock_gettime are available */
+#if !defined(__cplusplus) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
@@ -35,7 +41,7 @@ extern "C"
         char label[512]; // Buffer to hold concatenated label
         struct timespec start;
         int depth;
-        int call_index;  // Index of this TIME_IT call
+        int call_index; // Index of this TIME_IT call
     } log_timer_t;
 
     /* ---------- Configurable outputs ---------- */
@@ -52,8 +58,10 @@ extern "C"
     /* ---------- Thread-local buffer for label concatenation ---------- */
 #if defined(__cplusplus)
     static thread_local char time_it_label_buffer[512];
+#elif defined(__GNUC__) || defined(__clang__)
+static __thread char time_it_label_buffer[512];
 #else
-static _Thread_local char time_it_label_buffer[512];
+#error "Thread-local storage not supported"
 #endif
 
     /* ---------- Helper function to concatenate multiple strings ---------- */
@@ -81,7 +89,7 @@ static _Thread_local char time_it_label_buffer[512];
     /* ---------- Helper: print elapsed in scientific notation, exponent multiple of 3 ---------- */
     static inline void print_scientific(FILE *out, long elapsed_ns)
     {
-        double value = (double)elapsed_ns / 1e9;  // Convert nanoseconds to seconds
+        double value = (double)elapsed_ns / 1e9; // Convert nanoseconds to seconds
         int exp3 = 0;
 
         if (value == 0)
@@ -105,10 +113,12 @@ static _Thread_local char time_it_label_buffer[512];
         if (time_it_enable_tree)
         {
             // Print tree structure with pipes and dashes
-            for (int i = 0; i < t->depth; ++i) {
+            for (int i = 0; i < t->depth; ++i)
+            {
                 fputs("|   ", tree_out);
             }
-            if (t->depth > 0) {
+            if (t->depth > 0)
+            {
                 fputs("|-- ", tree_out);
             }
             fprintf(tree_out, "[%d] %s [%s]: ", t->call_index, t->name, t->label);
@@ -149,11 +159,13 @@ static _Thread_local char time_it_label_buffer[512];
 
 /* ---------- Thread-local depth and counter ---------- */
 #if defined(__cplusplus)
-    static thread_local int log_depth = 0;
-    static thread_local int log_call_count = 0;
+static thread_local int log_depth = 0;
+static thread_local int log_call_count = 0;
+#elif defined(__GNUC__) || defined(__clang__)
+static __thread int log_depth = 0;
+static __thread int log_call_count = 0;
 #else
-    static _Thread_local int log_depth = 0;
-    static _Thread_local int log_call_count = 0;
+#error "Thread-local storage not supported"
 #endif
 
 /* ---------- C++ RAII ---------- */
@@ -192,18 +204,21 @@ private:
 
 #ifdef __cplusplus
 /* Helper to convert std::string to const char* */
-inline const char* time_it_to_cstr(const char *s) { return s; }
-inline const char* time_it_to_cstr(const std::string &s) { return s.c_str(); }
+inline const char *time_it_to_cstr(const char *s) { return s; }
+inline const char *time_it_to_cstr(const std::string &s) { return s.c_str(); }
 
 /* Variadic template for building label - just stores args in buffer */
-template<typename... Args>
-inline const char* time_it_build_label(Args... args) {
+template <typename... Args>
+inline const char *time_it_build_label(Args... args)
+{
     static thread_local char buf[512];
     int pos = 0;
-    const char* strs[] = {time_it_to_cstr(args)...};
-    for (size_t i = 0; i < sizeof...(Args) && pos < 511; i++) {
-        const char* s = strs[i];
-        while (*s && pos < 511) {
+    const char *strs[] = {time_it_to_cstr(args)...};
+    for (size_t i = 0; i < sizeof...(Args) && pos < 511; i++)
+    {
+        const char *s = strs[i];
+        while (*s && pos < 511)
+        {
             buf[pos++] = *s++;
         }
     }
@@ -215,14 +230,16 @@ inline const char* time_it_build_label(Args... args) {
 #ifdef __cplusplus
 #define TIME_IT(...) TimeItTimer __time_it__(LOG_FUNC_NAME, time_it_build_label(__VA_ARGS__))
 #else
-#define TIME_IT(...) do {                              \
-    log_timer_t __time_it__                          \
-        __attribute__((cleanup(log_timer_cleanup))); \
-    __time_it__.name = LOG_FUNC_NAME;                \
-    snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
-    __time_it__.depth = log_depth++;                 \
-    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start); \
-} while(0)
+#define TIME_IT(...)                                                                                                          \
+    do                                                                                                                        \
+    {                                                                                                                         \
+        log_timer_t __time_it__                                                                                               \
+            __attribute__((cleanup(log_timer_cleanup)));                                                                      \
+        __time_it__.name = LOG_FUNC_NAME;                                                                                     \
+        snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
+        __time_it__.depth = log_depth++;                                                                                      \
+        clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);                                                                   \
+    } while (0)
 #endif
 
 /* ---------- C++ RAII for basename files ---------- */
@@ -246,9 +263,10 @@ public:
 
         time_it_tree_file = tree_f_;
         time_it_csv_file = csv_f_;
-        
+
         // Write CSV header if file is new
-        if (csv_f_ && csv_f_ != stderr && ftell(csv_f_) == 0) {
+        if (csv_f_ && csv_f_ != stderr && ftell(csv_f_) == 0)
+        {
             fprintf(csv_f_, "call_index,depth,function,label,elapsed_seconds\n");
         }
     }
@@ -285,12 +303,12 @@ static inline void log_timer_cleanup(log_timer_t *t)
     log_depth--;
 }
 
-#define TIME_IT(...) \
-    log_timer_t __time_it__ __attribute__((cleanup(log_timer_cleanup))); \
-    __time_it__.name = LOG_FUNC_NAME;                                \
+#define TIME_IT(...)                                                                                                      \
+    log_timer_t __time_it__ __attribute__((cleanup(log_timer_cleanup)));                                                  \
+    __time_it__.name = LOG_FUNC_NAME;                                                                                     \
     snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
-    __time_it__.depth = log_depth++;                                 \
-    __time_it__.call_index = ++log_call_count;                       \
+    __time_it__.depth = log_depth++;                                                                                      \
+    __time_it__.call_index = ++log_call_count;                                                                            \
     clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);
 
 /* ---------- C basename files cleanup ---------- */
@@ -300,18 +318,19 @@ static inline void time_it_file_cleanup(FILE **f)
         fclose(*f);
 }
 
-#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                         \
-    FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup))); \
-    FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));  \
-    char __tree_path__[512];                                               \
-    char __csv_path__[512];                                                \
-    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);    \
-    snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);      \
-    __time_it_tree__ = fopen(__tree_path__, "a");                          \
-    __time_it_csv__ = fopen(__csv_path__, "a");                            \
-    time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
-    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;         \
-    if (__time_it_csv__ && __time_it_csv__ != stderr && ftell(__time_it_csv__) == 0) { \
+#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                                     \
+    FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup)));             \
+    FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));              \
+    char __tree_path__[512];                                                           \
+    char __csv_path__[512];                                                            \
+    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);                \
+    snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);                  \
+    __time_it_tree__ = fopen(__tree_path__, "a");                                      \
+    __time_it_csv__ = fopen(__csv_path__, "a");                                        \
+    time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;                  \
+    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;                     \
+    if (__time_it_csv__ && __time_it_csv__ != stderr && ftell(__time_it_csv__) == 0)   \
+    {                                                                                  \
         fprintf(__time_it_csv__, "call_index,depth,function,label,elapsed_seconds\n"); \
     }
 

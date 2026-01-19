@@ -22,13 +22,17 @@ Just copy `time_it.h` into your project and include it:
 #include "time_it.h"
 ```
 
-No CMake or build system required. Works with any C++ compiler or GCC/Clang C compiler.
+No CMake or build system required.
+
+### C Compatibility
 
 **Linking requirement:** When compiling for a C project, you must link against the math library using the `-lm` flag:
 
 ```bash
 gcc -o program program.c -lm
 ```
+
+**C99 Compatibility:** TimeIt automatically defines `_POSIX_C_SOURCE` when compiling C code (non-C++) to ensure POSIX functions like `clock_gettime()` are available. This works seamlessly with `-std=c99` and other C standards without requiring any additional configuration in your code.
 
 ---
 
