@@ -271,16 +271,12 @@ static inline void log_timer_cleanup(log_timer_t *t)
     log_depth--;
 }
 
-#define TIME_IT(...)                                                                                                          \
-    do                                                                                                                        \
-    {                                                                                                                         \
-        log_timer_t __time_it__                                                                                               \
-            __attribute__((cleanup(log_timer_cleanup)));                                                                      \
-        __time_it__.name = LOG_FUNC_NAME;                                                                                     \
-        snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
-        __time_it__.depth = log_depth++;                                                                                      \
-        clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);                                                                   \
-    } while (0)
+#define TIME_IT(...) \
+    log_timer_t __time_it__ __attribute__((cleanup(log_timer_cleanup))); \
+    __time_it__.name = LOG_FUNC_NAME;                                \
+    snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
+    __time_it__.depth = log_depth++;                                 \
+    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);
 
 /* ---------- C basename files cleanup ---------- */
 static inline void time_it_file_cleanup(FILE **f)
