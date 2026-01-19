@@ -241,6 +241,11 @@ public:
 
         time_it_tree_file = tree_f_;
         time_it_csv_file = csv_f_;
+        
+        // Write CSV header if file is new
+        if (csv_f_ && csv_f_ != stderr && ftell(csv_f_) == 0) {
+            fprintf(csv_f_, "call_index,depth,function,label,elapsed_seconds\n");
+        }
     }
     TimeItBasenameFiles(const std::string &basename) : TimeItBasenameFiles((char *)basename.c_str()) {}
     ~TimeItBasenameFiles()
@@ -300,7 +305,10 @@ static inline void time_it_file_cleanup(FILE **f)
     __time_it_tree__ = fopen(__tree_path__, "a");                          \
     __time_it_csv__ = fopen(__csv_path__, "a");                            \
     time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
-    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;
+    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;         \
+    if (__time_it_csv__ && __time_it_csv__ != stderr && ftell(__time_it_csv__) == 0) { \
+        fprintf(__time_it_csv__, "call_index,depth,function,label,elapsed_seconds\n"); \
+    }
 
 #else
 #error "TIME_IT requires C++ or GCC/Clang cleanup support"
