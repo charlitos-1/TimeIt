@@ -128,7 +128,7 @@ static __thread char time_it_label_buffer[512];
 
         if (time_it_enable_csv)
         {
-            fprintf(csv_out, "%d,%d,%s,%s,", t->call_index, t->depth, t->name, t->label);
+            fprintf(csv_out, "%d\t%d\t%s\t%s\t", t->call_index, t->depth, t->name, t->label);
             print_scientific(csv_out, elapsed_ns);
             fputs("\n", csv_out);
         }
@@ -251,7 +251,7 @@ public:
         char tree_path[512];
         char csv_path[512];
         snprintf(tree_path, sizeof(tree_path), "%s.log", basename);
-        snprintf(csv_path, sizeof(csv_path), "%s.csv", basename);
+        snprintf(csv_path, sizeof(csv_path), "%s.tsv", basename);
 
         tree_f_ = fopen(tree_path, "a");
         csv_f_ = fopen(csv_path, "a");
@@ -267,7 +267,7 @@ public:
         // Write CSV header if file is new
         if (csv_f_ && csv_f_ != stderr && ftell(csv_f_) == 0)
         {
-            fprintf(csv_f_, "call_index,depth,function,label,elapsed_seconds\n");
+            fprintf(csv_f_, "call_index\tdepth\tfunction\tlabel\telapsed_seconds\n");
         }
     }
     TimeItBasenameFiles(const std::string &basename) : TimeItBasenameFiles((char *)basename.c_str()) {}
@@ -318,20 +318,20 @@ static inline void time_it_file_cleanup(FILE **f)
         fclose(*f);
 }
 
-#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                                     \
-    FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup)));             \
-    FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));              \
-    char __tree_path__[512];                                                           \
-    char __csv_path__[512];                                                            \
-    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);                \
-    snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);                  \
-    __time_it_tree__ = fopen(__tree_path__, "a");                                      \
-    __time_it_csv__ = fopen(__csv_path__, "a");                                        \
-    time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;                  \
-    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;                     \
-    if (__time_it_csv__ && __time_it_csv__ != stderr && ftell(__time_it_csv__) == 0)   \
-    {                                                                                  \
-        fprintf(__time_it_csv__, "call_index,depth,function,label,elapsed_seconds\n"); \
+#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                                         \
+    FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup)));                 \
+    FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));                  \
+    char __tree_path__[512];                                                               \
+    char __csv_path__[512];                                                                \
+    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);                    \
+    snprintf(__csv_path__, sizeof(__csv_path__), "%s.tsv", basename);                      \
+    __time_it_tree__ = fopen(__tree_path__, "a");                                          \
+    __time_it_csv__ = fopen(__csv_path__, "a");                                            \
+    time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;                      \
+    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;                         \
+    if (__time_it_csv__ && __time_it_csv__ != stderr && ftell(__time_it_csv__) == 0)       \
+    {                                                                                      \
+        fprintf(__time_it_csv__, "call_index\tdepth\tfunction\tlabel\telapsed_seconds\n"); \
     }
 
 #else
