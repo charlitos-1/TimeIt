@@ -31,15 +31,15 @@ extern "C"
     } log_timer_t;
 
     /* ---------- Configurable outputs ---------- */
-    static FILE *timeit_tree_file = NULL;
-    static FILE *timeit_csv_file = NULL;
-    static int timeit_enable_tree = LOG_OUTPUT_TREE;
-    static int timeit_enable_csv = LOG_OUTPUT_CSV;
+    static FILE *time_it_tree_file = NULL;
+    static FILE *time_it_csv_file = NULL;
+    static int time_it_enable_tree = LOG_OUTPUT_TREE;
+    static int time_it_enable_csv = LOG_OUTPUT_CSV;
 
-    static inline void timeit_set_tree_file(FILE *f) { timeit_tree_file = f; }
-    static inline void timeit_set_csv_file(FILE *f) { timeit_csv_file = f; }
-    static inline void timeit_set_tree(int enable) { timeit_enable_tree = enable; }
-    static inline void timeit_set_csv(int enable) { timeit_enable_csv = enable; }
+    static inline void time_it_set_tree_file(FILE *f) { time_it_tree_file = f; }
+    static inline void time_it_set_csv_file(FILE *f) { time_it_csv_file = f; }
+    static inline void time_it_set_tree(int enable) { time_it_enable_tree = enable; }
+    static inline void time_it_set_csv(int enable) { time_it_enable_csv = enable; }
 
     /* ---------- Helper: print elapsed in scientific notation, exponent multiple of 3 ---------- */
     static inline void print_scientific(FILE *out, long elapsed_ns)
@@ -62,10 +62,10 @@ extern "C"
     /* ---------- Logging function ---------- */
     static inline void log_timer_end(log_timer_t *t, long elapsed_ns)
     {
-        FILE *tree_out = timeit_tree_file ? timeit_tree_file : stderr;
-        FILE *csv_out = timeit_csv_file ? timeit_csv_file : stderr;
+        FILE *tree_out = time_it_tree_file ? time_it_tree_file : stderr;
+        FILE *csv_out = time_it_csv_file ? time_it_csv_file : stderr;
 
-        if (timeit_enable_tree)
+        if (time_it_enable_tree)
         {
             for (int i = 0; i < t->depth; ++i)
                 fputs("    ", tree_out);
@@ -74,7 +74,7 @@ extern "C"
             fputs("\n", tree_out);
         }
 
-        if (timeit_enable_csv)
+        if (time_it_enable_csv)
         {
             fprintf(csv_out, "%d,%s,%s,", t->depth, t->name, t->category);
             print_scientific(csv_out, elapsed_ns);
@@ -115,10 +115,10 @@ static _Thread_local int log_depth = 0;
 /* ---------- C++ RAII ---------- */
 #ifdef __cplusplus
 
-class TimeitTimer
+class TimeItTimer
 {
 public:
-    TimeitTimer(const char *name, const char *category)
+    TimeItTimer(const char *name, const char *category)
     {
         t_.name = name;
         t_.category = category;
@@ -126,7 +126,7 @@ public:
         clock_gettime(CLOCK_MONOTONIC, &t_.start);
     }
 
-    ~TimeitTimer()
+    ~TimeItTimer()
     {
         struct timespec end;
         clock_gettime(CLOCK_MONOTONIC, &end);
@@ -142,13 +142,13 @@ private:
     log_timer_t t_;
 };
 
-#define TIME_IT(cat) TimeitTimer __time_it__(LOG_FUNC_NAME, cat)
+#define TIME_IT(cat) TimeItTimer __time_it__(LOG_FUNC_NAME, cat)
 
 /* ---------- C++ RAII for basename files ---------- */
-class TimeitBasenameFiles
+class TimeItBasenameFiles
 {
 public:
-    TimeitBasenameFiles(const char *basename)
+    TimeItBasenameFiles(const char *basename)
     {
         char tree_path[512];
         char csv_path[512];
@@ -163,17 +163,17 @@ public:
         if (!csv_f_)
             csv_f_ = stderr;
 
-        timeit_tree_file = tree_f_;
-        timeit_csv_file = csv_f_;
+        time_it_tree_file = tree_f_;
+        time_it_csv_file = csv_f_;
     }
-    ~TimeitBasenameFiles()
+    ~TimeItBasenameFiles()
     {
         if (tree_f_ && tree_f_ != stderr)
             fclose(tree_f_);
         if (csv_f_ && csv_f_ != stderr)
             fclose(csv_f_);
-        timeit_tree_file = stderr;
-        timeit_csv_file = stderr;
+        time_it_tree_file = stderr;
+        time_it_csv_file = stderr;
     }
 
 private:
@@ -181,7 +181,7 @@ private:
     FILE *csv_f_;
 };
 
-#define SET_TIME_IT_OUTPUT_FILE_BASENAME(name) TimeitBasenameFiles __time_it_files__(name)
+#define SET_TIME_IT_OUTPUT_FILE_BASENAME(name) TimeItBasenameFiles __time_it_files__(name)
 
 #elif defined(__GNUC__) || defined(__clang__)
 
@@ -207,23 +207,23 @@ static inline void log_timer_cleanup(log_timer_t *t)
     clock_gettime(CLOCK_MONOTONIC, &__time_it__.start)
 
 /* ---------- C basename files cleanup ---------- */
-static inline void timeit_file_cleanup(FILE **f)
+static inline void time_it_file_cleanup(FILE **f)
 {
     if (f && *f && *f != stderr)
         fclose(*f);
 }
 
 #define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                        \
-    FILE *__time_it_tree__ __attribute__((cleanup(timeit_file_cleanup))); \
-    FILE *__time_it_csv__ __attribute__((cleanup(timeit_file_cleanup)));  \
+    FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup))); \
+    FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));  \
     char __tree_path__[512];                                              \
     char __csv_path__[512];                                               \
     snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);   \
     snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);     \
     __time_it_tree__ = fopen(__tree_path__, "a");                         \
     __time_it_csv__ = fopen(__csv_path__, "a");                           \
-    timeit_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
-    timeit_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;
+    time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
+    time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;
 
 #else
 #error "TIME_IT requires C++ or GCC/Clang cleanup support"
