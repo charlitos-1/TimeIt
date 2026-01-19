@@ -80,7 +80,7 @@ static _Thread_local char time_it_label_buffer[512];
     /* ---------- Helper: print elapsed in scientific notation, exponent multiple of 3 ---------- */
     static inline void print_scientific(FILE *out, long elapsed_ns)
     {
-        double value = (double)elapsed_ns;
+        double value = (double)elapsed_ns / 1e9;  // Convert nanoseconds to seconds
         int exp3 = 0;
 
         if (value == 0)
