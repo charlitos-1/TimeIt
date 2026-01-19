@@ -24,6 +24,12 @@ Just copy `time_it.h` into your project and include it:
 
 No CMake or build system required. Works with any C++ compiler or GCC/Clang C compiler.
 
+**Linking requirement:** When compiling for a C project, you must link against the math library using the `-lm` flag:
+
+```bash
+gcc -o program program.c -lm
+```
+
 ---
 
 ## Usage
