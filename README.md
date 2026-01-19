@@ -6,7 +6,7 @@ TimeIt is a lightweight, header-only library for logging function and scope exec
 
 ## Features
 
-* **Header-only** – just `#include "timeit.h"`
+* **Header-only** – just `#include "time_it.h"`
 * **C++ RAII** and **C GCC/Clang cleanup**
 * **Nested scope timing** with proper indentation and depth tracking
 * **Tree (`.log`)** and **CSV (`.csv`)** output files
@@ -16,10 +16,10 @@ TimeIt is a lightweight, header-only library for logging function and scope exec
 
 ## Installation
 
-Just copy `timeit.h` into your project and include it:
+Just copy `time_it.h` into your project and include it:
 
 ```cpp
-#include "timeit.h"
+#include "time_it.h"
 ```
 
 No CMake or build system required. Works with any C++ compiler or GCC/Clang C compiler.
@@ -59,7 +59,7 @@ TIME_IT("category name");
 #include <stdio.h>
 #include <thread>
 #include <chrono>
-#include "timeit.h"
+#include "time_it.h"
 
 void sub_task() {
     TIME_IT("sub_task");
@@ -90,7 +90,7 @@ int main() {
 ```c
 #include <stdio.h>
 #include <unistd.h>
-#include "timeit.h"
+#include "time_it.h"
 
 void sub_task() {
     TIME_IT("sub_task");
@@ -149,7 +149,7 @@ You can override defaults **before including the header**:
 #define LOG_ENABLE_TIMING 0      // Disable all timing
 #define LOG_OUTPUT_TREE 0        // Disable tree output
 #define LOG_OUTPUT_CSV 1         // Enable CSV output
-#include "timeit.h"
+#include "time_it.h"
 ```
 
 ---
