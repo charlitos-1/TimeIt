@@ -35,6 +35,7 @@ extern "C"
         char label[512]; // Buffer to hold concatenated label
         struct timespec start;
         int depth;
+        int call_index;  // Index of this TIME_IT call
     } log_timer_t;
 
     /* ---------- Configurable outputs ---------- */
@@ -105,14 +106,14 @@ static _Thread_local char time_it_label_buffer[512];
         {
             for (int i = 0; i < t->depth; ++i)
                 fputs("    ", tree_out);
-            fprintf(tree_out, "%s [%s]: ", t->name, t->label);
+            fprintf(tree_out, "[%d] %s [%s]: ", t->call_index, t->name, t->label);
             print_scientific(tree_out, elapsed_ns);
             fputs("\n", tree_out);
         }
 
         if (time_it_enable_csv)
         {
-            fprintf(csv_out, "%d,%s,%s,", t->depth, t->name, t->label);
+            fprintf(csv_out, "%d,%d,%s,%s,", t->call_index, t->depth, t->name, t->label);
             print_scientific(csv_out, elapsed_ns);
             fputs("\n", csv_out);
         }
@@ -141,11 +142,13 @@ static _Thread_local char time_it_label_buffer[512];
 #define SET_TIME_IT_OUTPUT_FILE_BASENAME(name) ((void)0)
 #else
 
-/* ---------- Thread-local depth ---------- */
+/* ---------- Thread-local depth and counter ---------- */
 #if defined(__cplusplus)
-static thread_local int log_depth = 0;
+    static thread_local int log_depth = 0;
+    static thread_local int log_call_count = 0;
 #else
-static _Thread_local int log_depth = 0;
+    static _Thread_local int log_depth = 0;
+    static _Thread_local int log_call_count = 0;
 #endif
 
 /* ---------- C++ RAII ---------- */
@@ -159,6 +162,7 @@ public:
         t_.name = name;
         snprintf(t_.label, sizeof(t_.label), "%s", label);
         t_.depth = log_depth++;
+        t_.call_index = ++log_call_count;
         clock_gettime(CLOCK_MONOTONIC, &t_.start);
     }
     TimeItTimer(const std::string &name, const std::string &label) : TimeItTimer(name.c_str(), label.c_str()) {}
@@ -276,6 +280,7 @@ static inline void log_timer_cleanup(log_timer_t *t)
     __time_it__.name = LOG_FUNC_NAME;                                \
     snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
     __time_it__.depth = log_depth++;                                 \
+    __time_it__.call_index = ++log_call_count;                       \
     clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);
 
 /* ---------- C basename files cleanup ---------- */
