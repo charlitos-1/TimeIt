@@ -129,6 +129,9 @@ public:
         t_.depth = log_depth++;
         clock_gettime(CLOCK_MONOTONIC, &t_.start);
     }
+    TimeItTimer(const std::string &name, const std::string &category) : TimeItTimer(name.c_str(), category.c_str()) {}
+    TimeItTimer(const std::string &name, const char *category) : TimeItTimer(name.c_str(), category) {}
+    TimeItTimer(const char *name, const std::string &category) : TimeItTimer(name, category.c_str()) {}
 
     ~TimeItTimer()
     {
