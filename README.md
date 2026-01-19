@@ -1,0 +1,2 @@
+# TimeIt
+Simpler function timer
