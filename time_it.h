@@ -29,7 +29,7 @@ extern "C"
     typedef struct log_timer
     {
         const char *name;
-        const char *category;
+        const char *label;
         struct timespec start;
         int depth;
     } log_timer_t;
@@ -73,14 +73,14 @@ extern "C"
         {
             for (int i = 0; i < t->depth; ++i)
                 fputs("    ", tree_out);
-            fprintf(tree_out, "%s [%s]: ", t->name, t->category);
+            fprintf(tree_out, "%s [%s]: ", t->name, t->label);
             print_scientific(tree_out, elapsed_ns);
             fputs("\n", tree_out);
         }
 
         if (time_it_enable_csv)
         {
-            fprintf(csv_out, "%d,%s,%s,", t->depth, t->name, t->category);
+            fprintf(csv_out, "%d,%s,%s,", t->depth, t->name, t->label);
             print_scientific(csv_out, elapsed_ns);
             fputs("\n", csv_out);
         }
@@ -105,7 +105,7 @@ extern "C"
 
 /* ---------- Zero-cost disable ---------- */
 #if !LOG_ENABLE_TIMING
-#define TIME_IT(cat) ((void)0)
+#define TIME_IT(label) ((void)0)
 #define SET_TIME_IT_OUTPUT_FILE_BASENAME(name) ((void)0)
 #else
 
@@ -122,16 +122,16 @@ static _Thread_local int log_depth = 0;
 class TimeItTimer
 {
 public:
-    TimeItTimer(const char *name, const char *category)
+    TimeItTimer(const char *name, const char *label)
     {
         t_.name = name;
-        t_.category = category;
+        t_.label = label;
         t_.depth = log_depth++;
         clock_gettime(CLOCK_MONOTONIC, &t_.start);
     }
-    TimeItTimer(const std::string &name, const std::string &category) : TimeItTimer(name.c_str(), category.c_str()) {}
-    TimeItTimer(const std::string &name, const char *category) : TimeItTimer(name.c_str(), category) {}
-    TimeItTimer(const char *name, const std::string &category) : TimeItTimer(name, category.c_str()) {}
+    TimeItTimer(const std::string &name, const std::string &label) : TimeItTimer(name.c_str(), label.c_str()) {}
+    TimeItTimer(const std::string &name, const char *label) : TimeItTimer(name.c_str(), label) {}
+    TimeItTimer(const char *name, const std::string &label) : TimeItTimer(name, label.c_str()) {}
 
     ~TimeItTimer()
     {
@@ -149,7 +149,7 @@ private:
     log_timer_t t_;
 };
 
-#define TIME_IT(cat) TimeItTimer __time_it__(LOG_FUNC_NAME, cat)
+#define TIME_IT(label) TimeItTimer __time_it__(LOG_FUNC_NAME, label)
 
 /* ---------- C++ RAII for basename files ---------- */
 class TimeItBasenameFiles
@@ -206,13 +206,13 @@ static inline void log_timer_cleanup(log_timer_t *t)
     log_depth--;
 }
 
-#define TIME_IT(cat)                                 \
+#define TIME_IT(lab)                                 \
     log_timer_t __time_it__                          \
         __attribute__((cleanup(log_timer_cleanup))); \
     __time_it__.name = LOG_FUNC_NAME;                \
-    __time_it__.category = cat;                      \
+    __time_it__.label = lab;                         \
     __time_it__.depth = log_depth++;                 \
-    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start)
+    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);
 
 /* ---------- C basename files cleanup ---------- */
 static inline void time_it_file_cleanup(FILE **f)
