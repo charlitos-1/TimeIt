@@ -152,8 +152,8 @@ static __thread char time_it_label_buffer[512];
 static thread_local int log_depth = 0;
 static thread_local int log_call_count = 0;
 #elif defined(__GNUC__) || defined(__clang__)
-static __thread int log_depth = 0;
-static __thread int log_call_count = 0;
+static __thread int log_depth __attribute__((unused)) = 0;
+static __thread int log_call_count __attribute__((unused)) = 0;
 #else
 #error "Thread-local storage not supported"
 #endif
