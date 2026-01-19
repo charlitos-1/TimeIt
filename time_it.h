@@ -2,6 +2,9 @@
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 #include <string>
@@ -29,7 +32,7 @@ extern "C"
     typedef struct log_timer
     {
         const char *name;
-        const char *label;
+        char label[512]; // Buffer to hold concatenated label
         struct timespec start;
         int depth;
     } log_timer_t;
@@ -44,6 +47,35 @@ extern "C"
     static inline void time_it_set_csv_file(FILE *f) { time_it_csv_file = f; }
     static inline void time_it_set_tree(int enable) { time_it_enable_tree = enable; }
     static inline void time_it_set_csv(int enable) { time_it_enable_csv = enable; }
+
+    /* ---------- Thread-local buffer for label concatenation ---------- */
+#if defined(__cplusplus)
+    static thread_local char time_it_label_buffer[512];
+#else
+static _Thread_local char time_it_label_buffer[512];
+#endif
+
+    /* ---------- Helper function to concatenate multiple strings ---------- */
+    static inline const char *time_it_concat_labels(const char *first, ...)
+    {
+        va_list args;
+        va_start(args, first);
+
+        size_t pos = 0;
+        const char *str = first;
+        while (str != NULL && pos < sizeof(time_it_label_buffer) - 1)
+        {
+            size_t len = strlen(str);
+            size_t to_copy = (pos + len < sizeof(time_it_label_buffer) - 1) ? len : (sizeof(time_it_label_buffer) - 1 - pos);
+            memcpy(&time_it_label_buffer[pos], str, to_copy);
+            pos += to_copy;
+            str = va_arg(args, const char *);
+        }
+        time_it_label_buffer[pos] = '\0';
+        va_end(args);
+
+        return time_it_label_buffer;
+    }
 
     /* ---------- Helper: print elapsed in scientific notation, exponent multiple of 3 ---------- */
     static inline void print_scientific(FILE *out, long elapsed_ns)
@@ -125,7 +157,7 @@ public:
     TimeItTimer(const char *name, const char *label)
     {
         t_.name = name;
-        t_.label = label;
+        snprintf(t_.label, sizeof(t_.label), "%s", label);
         t_.depth = log_depth++;
         clock_gettime(CLOCK_MONOTONIC, &t_.start);
     }
@@ -149,7 +181,40 @@ private:
     log_timer_t t_;
 };
 
-#define TIME_IT(label) TimeItTimer __time_it__(LOG_FUNC_NAME, label)
+#ifdef __cplusplus
+/* Helper to convert std::string to const char* */
+inline const char* time_it_to_cstr(const char *s) { return s; }
+inline const char* time_it_to_cstr(const std::string &s) { return s.c_str(); }
+
+/* Variadic template for building label - just stores args in buffer */
+template<typename... Args>
+inline const char* time_it_build_label(Args... args) {
+    static thread_local char buf[512];
+    int pos = 0;
+    const char* strs[] = {time_it_to_cstr(args)...};
+    for (size_t i = 0; i < sizeof...(Args) && pos < 511; i++) {
+        const char* s = strs[i];
+        while (*s && pos < 511) {
+            buf[pos++] = *s++;
+        }
+    }
+    buf[pos] = '\0';
+    return buf;
+}
+#endif
+
+#ifdef __cplusplus
+#define TIME_IT(...) TimeItTimer __time_it__(LOG_FUNC_NAME, time_it_build_label(__VA_ARGS__))
+#else
+#define TIME_IT(...) do {                              \
+    log_timer_t __time_it__                          \
+        __attribute__((cleanup(log_timer_cleanup))); \
+    __time_it__.name = LOG_FUNC_NAME;                \
+    snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
+    __time_it__.depth = log_depth++;                 \
+    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start); \
+} while(0)
+#endif
 
 /* ---------- C++ RAII for basename files ---------- */
 class TimeItBasenameFiles
@@ -206,13 +271,16 @@ static inline void log_timer_cleanup(log_timer_t *t)
     log_depth--;
 }
 
-#define TIME_IT(lab)                                 \
-    log_timer_t __time_it__                          \
-        __attribute__((cleanup(log_timer_cleanup))); \
-    __time_it__.name = LOG_FUNC_NAME;                \
-    __time_it__.label = lab;                         \
-    __time_it__.depth = log_depth++;                 \
-    clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);
+#define TIME_IT(...)                                                                                                          \
+    do                                                                                                                        \
+    {                                                                                                                         \
+        log_timer_t __time_it__                                                                                               \
+            __attribute__((cleanup(log_timer_cleanup)));                                                                      \
+        __time_it__.name = LOG_FUNC_NAME;                                                                                     \
+        snprintf(__time_it__.label, sizeof(__time_it__.label), "%s", time_it_concat_labels(__VA_ARGS__, (const char *)NULL)); \
+        __time_it__.depth = log_depth++;                                                                                      \
+        clock_gettime(CLOCK_MONOTONIC, &__time_it__.start);                                                                   \
+    } while (0)
 
 /* ---------- C basename files cleanup ---------- */
 static inline void time_it_file_cleanup(FILE **f)
