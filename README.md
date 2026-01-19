@@ -32,7 +32,7 @@ No CMake or build system required.
 gcc -o program program.c -lm
 ```
 
-**C99 Compatibility:** TimeIt automatically defines `_POSIX_C_SOURCE` when compiling C code (non-C++) to ensure POSIX functions like `clock_gettime()` are available. This works seamlessly with `-std=c99` and other C standards without requiring any additional configuration in your code.
+**C99 Compatibility:** TimeIt automatically defines `_POSIX_C_SOURCE` when compiling C code (non-C++) to ensure POSIX functions like `clock_gettime()` are available. This works seamlessly with `-std=gnu99` or newer C standards.
 
 ---
 
