@@ -9,7 +9,7 @@ TimeIt is a lightweight, header-only library for logging function and scope exec
 * **Header-only** – just `#include "time_it.h"`
 * **C++ RAII** and **C GCC/Clang cleanup**
 * **Nested scope timing** with proper indentation and depth tracking
-* **Tree (`.log`)** and **TSV (`.tsv`)** output files
+* **Tree (`.log`)** and **CSV (`.csv`)** output files
 * **Optional compile-time disable** (`LOG_ENABLE_TIMING=0`)
 
 ---
@@ -47,7 +47,7 @@ SET_TIME_IT_OUTPUT_FILE_BASENAME("timings");
 This creates:
 
 * `timings.log` – tree-style indented output
-* `timings.tsv` – TSV (tab-separated) output
+* `timings.csv` – CSV output
 
 ---
 
@@ -136,18 +136,18 @@ int main() {
 int main() [main scope]: 1.517e7
 ```
 
-### TSV (`timings.tsv`)
+### CSV (`timings.csv`)
 
 ```
-1	void sub_task()	sub_task	1.007e7
-1	int main()	extra work	5.065e6
-0	int main()	main scope	1.517e7
+1,sub_task,sub_task,1.007e7
+1,main,extra work,5.065e6
+0,main,main scope,1.517e7
 ```
 
 * All elapsed times are in **scientific notation**
 * Exponents are multiples of 3 (aligned with SI units)
-* Tab-separated format avoids conflicts with `__PRETTY_FUNCTION__` which may contain commas
-* Nested scope depth is recorded in TSV
+* Function names are simple (`__func__`), not full signatures, avoiding comma conflicts
+* Nested scope depth is recorded in CSV
 * Outer scopes appear last, inner scopes first (due to RAII destruction order)
 
 ---
