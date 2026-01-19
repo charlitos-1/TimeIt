@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <math.h>
 
+#ifdef __cplusplus
+#include <string>
+#endif
+
 /* ================= USER CONFIG ================= */
 #ifndef LOG_ENABLE_TIMING
 #define LOG_ENABLE_TIMING 1
@@ -166,6 +170,7 @@ public:
         time_it_tree_file = tree_f_;
         time_it_csv_file = csv_f_;
     }
+    TimeItBasenameFiles(const std::string &basename) : TimeItBasenameFiles((char *)basename.c_str()) {}
     ~TimeItBasenameFiles()
     {
         if (tree_f_ && tree_f_ != stderr)
@@ -213,15 +218,15 @@ static inline void time_it_file_cleanup(FILE **f)
         fclose(*f);
 }
 
-#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                        \
+#define SET_TIME_IT_OUTPUT_FILE_BASENAME(basename)                         \
     FILE *__time_it_tree__ __attribute__((cleanup(time_it_file_cleanup))); \
     FILE *__time_it_csv__ __attribute__((cleanup(time_it_file_cleanup)));  \
-    char __tree_path__[512];                                              \
-    char __csv_path__[512];                                               \
-    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);   \
-    snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);     \
-    __time_it_tree__ = fopen(__tree_path__, "a");                         \
-    __time_it_csv__ = fopen(__csv_path__, "a");                           \
+    char __tree_path__[512];                                               \
+    char __csv_path__[512];                                                \
+    snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);    \
+    snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);      \
+    __time_it_tree__ = fopen(__tree_path__, "a");                          \
+    __time_it_csv__ = fopen(__csv_path__, "a");                            \
     time_it_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
     time_it_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;
 
