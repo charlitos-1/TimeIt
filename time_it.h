@@ -155,8 +155,8 @@ public:
         snprintf(tree_path, sizeof(tree_path), "%s.log", basename);
         snprintf(csv_path, sizeof(csv_path), "%s.csv", basename);
 
-        tree_f_ = fopen(tree_path, "w");
-        csv_f_ = fopen(csv_path, "w");
+        tree_f_ = fopen(tree_path, "a");
+        csv_f_ = fopen(csv_path, "a");
 
         if (!tree_f_)
             tree_f_ = stderr;
@@ -220,8 +220,8 @@ static inline void timeit_file_cleanup(FILE **f)
     char __csv_path__[512];                                               \
     snprintf(__tree_path__, sizeof(__tree_path__), "%s.log", basename);   \
     snprintf(__csv_path__, sizeof(__csv_path__), "%s.csv", basename);     \
-    __time_it_tree__ = fopen(__tree_path__, "w");                         \
-    __time_it_csv__ = fopen(__csv_path__, "w");                           \
+    __time_it_tree__ = fopen(__tree_path__, "a");                         \
+    __time_it_csv__ = fopen(__csv_path__, "a");                           \
     timeit_tree_file = __time_it_tree__ ? __time_it_tree__ : stderr;      \
     timeit_csv_file = __time_it_csv__ ? __time_it_csv__ : stderr;
 
